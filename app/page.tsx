@@ -88,7 +88,12 @@ export default function Home() {
         } else if (event.type === "done") {
           currentConvId = event.conv_id as string;
           setActiveConvId(currentConvId);
-          await loadConversations();
+          // Optimistically add to sidebar immediately, then sync in background
+          setConversations((prev) => {
+            if (prev.find((c) => c.conv_id === currentConvId)) return prev;
+            return [{ conv_id: currentConvId!, title: query.slice(0, 60), updated_at: new Date().toISOString() }, ...prev];
+          });
+          loadConversations();
         } else if (event.type === "error") {
           setMessages((prev) =>
             prev.map((m) => m.id === assistantId ? { ...m, content: "Something went wrong. Please try again." } : m)
