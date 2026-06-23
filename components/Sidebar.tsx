@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Conversation } from "@/lib/types";
 import { KnowledgePanel } from "@/components/KnowledgePanel";
 
@@ -15,13 +16,53 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+const MIN_WIDTH = 180;
+const MAX_WIDTH = 480;
+const DEFAULT_WIDTH = 260;
+
 export function Sidebar({ conversations, activeConvId, collapsed, onSelect, onNew, onDelete, onToggle }: SidebarProps) {
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(DEFAULT_WIDTH);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    dragging.current = true;
+    startX.current = e.clientX;
+    startWidth.current = width;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [width]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = e.clientX - startX.current;
+      const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta));
+      setWidth(next);
+    };
+    const onMouseUp = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  const sidebarWidth = collapsed ? 52 : width;
+
   return (
     <aside
-      className="flex flex-col border-r transition-all duration-200"
+      className="flex flex-col border-r relative"
       style={{
-        width: collapsed ? "52px" : "260px",
-        minWidth: collapsed ? "52px" : "260px",
+        width: sidebarWidth,
+        minWidth: sidebarWidth,
         backgroundColor: "var(--surface)",
         borderColor: "var(--border)",
       }}
@@ -78,7 +119,7 @@ export function Sidebar({ conversations, activeConvId, collapsed, onSelect, onNe
           {conversations.map((c) => (
             <div
               key={c.conv_id}
-              className="group flex items-center gap-2 px-3 py-2 rounded-[8px] cursor-pointer transition-colors"
+              className="group flex items-center gap-2 px-3 py-2 rounded-[8px] cursor-pointer transition-colors hover:bg-[#1E2024]"
               style={{
                 backgroundColor: activeConvId === c.conv_id ? "var(--surface-2)" : "transparent",
               }}
@@ -93,8 +134,9 @@ export function Sidebar({ conversations, activeConvId, collapsed, onSelect, onNe
               </span>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(c.conv_id); }}
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity"
+                className="opacity-20 group-hover:opacity-70 hover:!opacity-100 p-0.5 rounded transition-opacity flex-shrink-0"
                 style={{ color: "var(--secondary)" }}
+                title="Delete"
               >
                 <Trash2 size={12} />
               </button>
@@ -104,6 +146,15 @@ export function Sidebar({ conversations, activeConvId, collapsed, onSelect, onNe
       )}
 
       <KnowledgePanel collapsed={collapsed} />
+
+      {/* Drag handle — only shown when not collapsed */}
+      {!collapsed && (
+        <div
+          onMouseDown={onMouseDown}
+          className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-[#3a3d42] transition-colors"
+          style={{ zIndex: 10 }}
+        />
+      )}
     </aside>
   );
 }
