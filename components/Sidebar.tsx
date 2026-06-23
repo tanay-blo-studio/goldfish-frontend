@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Conversation } from "@/lib/types";
+import { KnowledgePanel } from "@/components/KnowledgePanel";
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -101,6 +102,8 @@ export function Sidebar({ conversations, activeConvId, collapsed, onSelect, onNe
           ))}
         </div>
       )}
+
+      <KnowledgePanel collapsed={collapsed} />
     </aside>
   );
 }
